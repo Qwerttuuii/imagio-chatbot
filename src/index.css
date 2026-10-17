@@ -1,0 +1,98 @@
+@import "tailwindcss";
+@import "@fontsource-variable/dm-sans";
+
+@theme {
+  --font-sans: "DM Sans Variable", ui-sans-serif, system-ui, sans-serif;
+
+  /* Colours eyeballed from the mockup; swap for the real brand values later */
+  --color-canvas: #f7f6f3;
+  --color-card: #ffffff;
+  --color-ink: #1d1b19;
+  --color-muted: #7a756e;
+  --color-line: #e8e5df;
+  --color-bubble: #efede9;
+  --color-accent: #ee6a45;
+  --color-accent-soft: #fbbba9;
+  --color-ok: #4f9a63;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+  height: 100%;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+@media (min-width: 481px) {
+  .app-shell {
+    background: var(--color-canvas);
+  }
+}
+
+.startup-screen {
+  position: fixed;
+  z-index: 50;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: var(--color-canvas);
+  animation: startup-fade-in 220ms ease-out both;
+}
+
+.startup-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px;
+  text-align: center;
+}
+
+.startup-logo {
+  display: block;
+  width: min(58vw, 220px);
+  height: auto;
+}
+
+.startup-tagline {
+  margin: 18px 0 28px;
+  color: var(--color-muted);
+  font-size: 14px;
+}
+
+.startup-indicator {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--color-line);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: startup-spin 750ms linear infinite;
+}
+
+@keyframes startup-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes startup-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .startup-screen,
+  .startup-indicator {
+    animation-duration: 0.01ms;
+    animation-iteration-count: 1;
+  }
+}
