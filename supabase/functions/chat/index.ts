@@ -8,7 +8,7 @@ const AI_API_KEY = Deno.env.get("AI_API_KEY");
 const AI_BASE_URL = (Deno.env.get("AI_BASE_URL") ?? "https://generativelanguage.googleapis.com/v1beta/openai").replace(/\/$/, "");
 const AI_MODEL = Deno.env.get("AI_MODEL") ?? "gemini-3.1-flash-lite";
 const REASONING_EFFORT = Deno.env.get("REASONING_EFFORT") ?? ""; // optional: minimal | low | medium | high
-const WHATSAPP_NUMBER = Deno.env.get("WHATSAPP_NUMBER") ?? "2348036389088"; // optional, e.g. 2348012345678 (no +). Only used for the "continue on WhatsApp" link
+const WHATSAPP_NUMBER = Deno.env.get("WHATSAPP_NUMBER") ?? ""; // optional, e.g. 2348012345678 (no +). Only used for the "continue on WhatsApp" link
 const ALLOWED_ORIGIN = Deno.env.get("ALLOWED_ORIGIN") ?? "*"; // lock to your site URL in production
 
 const db = createClient(Deno.env.get("SUPABASE_URL"), Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"), {
@@ -41,11 +41,12 @@ Your job is what a great in-store sales advisor does: understand what the custom
 HOW TO TALK
 - Warm, polished and concise. Plain text only: no markdown, no asterisks, no bullet symbols. Usually 1 to 4 short sentences.
 - Ask ONE question at a time. Never ask something the customer has already told you.
-- Never narrate what you are doing ("let me search"). Just answer.
+- Don't explain how you work. When you are about to search the catalog you may open with ONE short natural sentence (for example "Let me find the best fits for you.") and then search.
 - Write prices like ₦650,000.
 
 HOW TO ADVISE
 - Always call search_products before recommending, then call recommend_products with the 1 to 3 best matches (this shows product cards). Write a short lead-in before the cards if helpful, and after the cards explain briefly why they fit. Don't repeat the full price and size lists the cards already show.
+- Make independent tool calls together in one step (for example save_profile alongside search_products) so replies stay fast.
 - Mattresses: find out who it is for (one person, a couple, a guest room), whether they have back aches, whether they like a soft feel or sleep hot, their size, and their budget. Ask only what you still need (usually 2 or 3 questions), then recommend. Every mattress suits back, side and stomach sleepers, so sleep position does not change which mattress to pick. If the customer asks about sleep side or position, say so honestly.
 - Diffusers and scent: find out the space (home, office, shop, large open area, car), the mood they want (fresh, woody, sweet, cosy, clean) and their budget. Use the coverage figures from the catalog exactly as given. Always mention the complimentary oil that comes with the machine. For car use, the Intelligent Care Diffuser is the one.
 - Gifts: recommend the Zen Set.
@@ -153,6 +154,14 @@ async function catalog() {
   if (error) throw error;
   catalogCache = { at: Date.now(), rows: data ?? [] };
   return catalogCache.rows;
+}
+
+let kbCache = null;
+async function knowledge() {
+  if (kbCache && Date.now() - kbCache.at < 60_000) return kbCache.rows;
+  const { data } = await db.from("knowledge_base").select("question, answer").eq("active", true).order("created_at").limit(60);
+  kbCache = { at: Date.now(), rows: data ?? [] };
+  return kbCache.rows;
 }
 
 function variantsOf(p) {
@@ -331,7 +340,9 @@ async function postChat(messages) {
 }
 
 async function callModel(messages, hooks) {
+  const t0 = Date.now();
   const res = await postChat(messages);
+  const firstResponse = Date.now() - t0;
   let text = "";
   let finish = null;
   const calls = [];
@@ -366,6 +377,7 @@ async function callModel(messages, hooks) {
 
   for (const c of calls) if (!c.id) c.id = crypto.randomUUID();
   // Some providers report finish_reason "stop" even when tools were called, so trust `calls`.
+  console.log(`[timing] model first_response=${firstResponse}ms total=${Date.now() - t0}ms tools=${calls.map((c) => c.name).join(",") || "none"}`);
   return { text, calls: calls.filter((c) => c.name), finish };
 }
 
@@ -407,24 +419,31 @@ Deno.serve(async (req) => {
         }
         send({ type: "meta", conversation_id: conv.id });
 
-        // 2. basic abuse limits
+        // 2. load everything in ONE parallel batch: limits, history, profile, knowledge
+        const t0 = Date.now();
         const since = new Date(Date.now() - 60_000).toISOString();
         const userMsgs = () => db.from("messages").select("id", { count: "exact", head: true }).eq("conversation_id", conv.id).eq("role", "user");
-        const [{ count: recent }, { count: total }] = await Promise.all([userMsgs().gte("created_at", since), userMsgs()]);
+        const [{ count: recent }, { count: total }, hist, prof, kb] = await Promise.all([
+          userMsgs().gte("created_at", since),
+          userMsgs(),
+          db.from("messages").select("role, content").eq("conversation_id", conv.id).in("role", ["user", "assistant"]).order("created_at", { ascending: false }).limit(HISTORY_LIMIT),
+          db.from("customer_profiles").select("data").eq("conversation_id", conv.id).maybeSingle(),
+          knowledge(),
+        ]);
         if ((recent ?? 0) >= MAX_USER_MSGS_PER_MINUTE) { send({ type: "error", message: "You're sending messages very quickly. Please wait a moment and try again." }); return; }
         if ((total ?? 0) >= MAX_USER_MSGS_PER_CONVERSATION) { send({ type: "error", message: "This conversation has reached its limit. Please start a new one." }); return; }
 
-        // 3. save the user message, load context
-        await db.from("messages").insert({ conversation_id: conv.id, role: "user", content: message });
-        const [hist, prof, kbRes] = await Promise.all([
-          db.from("messages").select("role, content").eq("conversation_id", conv.id).in("role", ["user", "assistant"]).order("created_at", { ascending: false }).limit(HISTORY_LIMIT),
-          db.from("customer_profiles").select("data").eq("conversation_id", conv.id).maybeSingle(),
-          db.from("knowledge_base").select("question, answer").eq("active", true).order("created_at").limit(60),
-        ]);
+        // 3. save the user message in the background (awaited before the reply is saved)
+        const userInsert = Promise.resolve(db.from("messages").insert({ conversation_id: conv.id, role: "user", content: message }));
+        userInsert.catch(() => {});
+
         const history = (hist.data ?? []).reverse();
         while (history.length && history[0].role !== "user") history.shift();
+        history.push({ role: "user", content: message });
+        console.log(`[timing] setup=${Date.now() - t0}ms`);
+
         const convo = [
-          { role: "system", content: buildSystem(kbRes.data ?? [], prof.data?.data ?? {}) },
+          { role: "system", content: buildSystem(kb, prof.data?.data ?? {}) },
           ...history.map((m) => ({ role: m.role, content: m.content })),
         ];
 
@@ -467,7 +486,9 @@ Deno.serve(async (req) => {
           for (const c of calls) {
             let out;
             try {
+              const tt = Date.now();
               out = await runTool(c.name, safeParse(c.args), ctx);
+              console.log(`[timing] tool ${c.name}=${Date.now() - tt}ms`);
             } catch (e) {
               console.error("tool failed", c.name, e);
               out = "That tool failed. Continue without it.";
@@ -482,11 +503,13 @@ Deno.serve(async (req) => {
         }
 
         // 5. save the reply
+        await userInsert;
         const { data: saved } = await db
           .from("messages")
           .insert({ conversation_id: conv.id, role: "assistant", content: fullText, product_ids: ctx.shown })
           .select("id")
           .single();
+        console.log(`[timing] total=${Date.now() - t0}ms`);
         send({ type: "done", message_id: saved?.id ?? null });
       } catch (e) {
         console.error("chat error", e);
