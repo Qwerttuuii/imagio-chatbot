@@ -8,7 +8,7 @@ const AI_API_KEY = Deno.env.get("AI_API_KEY");
 const AI_BASE_URL = (Deno.env.get("AI_BASE_URL") ?? "https://generativelanguage.googleapis.com/v1beta/openai").replace(/\/$/, "");
 const AI_MODEL = Deno.env.get("AI_MODEL") ?? "gemini-3.1-flash-lite";
 const REASONING_EFFORT = Deno.env.get("REASONING_EFFORT") ?? ""; // optional: minimal | low | medium | high
-const WHATSAPP_NUMBER = Deno.env.get("WHATSAPP_NUMBER") ?? ""; // optional, e.g. 2348012345678 (no +). Only used for the "continue on WhatsApp" link
+const WHATSAPP_NUMBER = Deno.env.get("WHATSAPP_NUMBER") ?? "2348036389088"; // optional, e.g. 2348012345678 (no +). Only used for the "continue on WhatsApp" link
 const ALLOWED_ORIGIN = Deno.env.get("ALLOWED_ORIGIN") ?? "*"; // lock to your site URL in production
 
 const db = createClient(Deno.env.get("SUPABASE_URL"), Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"), {

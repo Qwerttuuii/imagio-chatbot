@@ -29,7 +29,7 @@ export default function App() {
   const status: Status = !online ? "offline" : thinking ? "thinking" : "ready";
 
   const whatsappLink = handoff?.whatsapp
-    ? `https://wa.me/${handoff.whatsapp}?text=${encodeURIComponent("Hello Imagio, I was chatting on your website and would like to speak to someone.")}`
+    ? `https://wa.me/${handoff.whatsapp}?text=${encodeURIComponent("Hello Imagio, I would like to speak to someone.")}`
     : null;
 
   return (
