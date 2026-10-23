@@ -10,7 +10,7 @@ const STATUS = {
 export default function Header({ status }: { status: Status }) {
   const s = STATUS[status];
   return (
-    <header className="flex min-h-16 shrink-0 items-center justify-between gap-3 border-b border-line px-5 py-2">
+    <header className="flex min-h-16 shrink-0 items-center justify-between gap-3 border-b border-line px-5 py-1">
       <Logo className="max-w-[45%]" />
       <div className="flex min-w-0 items-center gap-2 text-right text-xs leading-tight text-muted">
         <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />
