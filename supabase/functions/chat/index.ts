@@ -655,6 +655,7 @@ Deno.serve(async (req) => {
               { conversation_id: conv.id, role: "assistant", content: opener.text, created_at: new Date(now + 5).toISOString() },
             ])
             .select("id, role");
+          db.from("faq_hits").insert({ conversation_id: conv.id, mode: "opener", message: message.slice(0, 300) }).then(() => {}, () => {});
           send({ type: "done", message_id: saved?.find((m) => m.role === "assistant")?.id ?? null });
           return;
         }
