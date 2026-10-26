@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { ArrowUp, Paperclip, Plus, RotateCcw } from "lucide-react";
+import { ArrowUp, RotateCcw } from "lucide-react";
 
 interface Props {
   disabled: boolean;
@@ -44,14 +44,6 @@ export default function Composer({ disabled, onSend, onReset }: Props) {
 
         <div className="mt-4 flex items-center justify-between">
           <div className="flex items-center gap-4 text-muted sm:gap-5">
-            {/* Photo upload: wired up in a later step */}
-            <button type="button" aria-label="Attach a photo" className="hover:text-ink">
-              <Paperclip size={20} />
-            </button>
-            {/* Quick actions: wired up in a later step */}
-            <button type="button" aria-label="More options" className="hover:text-ink">
-              <Plus size={20} />
-            </button>
             <button type="button" aria-label="Start over" onClick={onReset} className="hover:text-ink">
               <RotateCcw size={20} />
             </button>
