@@ -30,26 +30,51 @@ const MAX_ROUNDS = 5;
 const HISTORY_LIMIT = 20;
 const MAX_USER_MSGS_PER_MINUTE = 8;
 const MAX_USER_MSGS_PER_CONVERSATION = 60;
-// The three home-screen cards always start the same way, so the first reply is instant (no AI call).
-// Matching is done on the exact card text; edit the texts here if you change the cards.
+// The home-screen cards send a fixed message, so the first reply is instant (no AI call).
+// Each card lists every wording it may send. If you change a card's text in Welcome.tsx,
+// add the new wording to that card's `matches` list (capitals and a final full stop don't matter).
 const OPENERS = [
   {
-    key: "comfort",
-    match: "help me find the right mattress and bedding for better sleep.",
-    text: "Happy to help you find the right mattress and bedding. Who will be sleeping on it: just you, a couple, or a guest room?",
+    key: "mattress",
+    matches: [
+      "Help me choose a mattress.",
+      "Ask me about our mattress.",
+      "Ask me about our mattresses.",
+      "Tell me about your mattresses.",
+    ],
+    text: "Happy to help you choose a mattress. Who will be sleeping on it: just you, a couple, or a guest room?",
   },
   {
-    key: "scent",
-    match: "help me discover the right scent for my space.",
-    text: "Let's find your scent. Where will you use it: at home, in a shop or office, a large open space, or your car?",
+    key: "diffuser",
+    matches: [
+      "Help me choose a diffuser machine.",
+      "Ask me about our diffuser machines.",
+      "Ask me about our diffuser machine.",
+      "Tell me about your diffuser machines.",
+    ],
+    text: "Happy to help you choose a diffuser machine. Where will you use it: at home, in a shop or office, in a large open space, or in your car?",
   },
   {
-    key: "furniture",
-    match: "i'd like help finding the right furniture for my home.",
-    text: "Right now our collection focuses on better sleep and home fragrance: mattresses, pillows, bedsets and duvets, plus diffusers, candles and room sprays. Which would you like help with?",
+    key: "oil",
+    matches: [
+      "Help me choose a fragrance oil.",
+      "Ask me about our fragrance oils.",
+      "Ask me about our fragrance oil.",
+      "Tell me about your fragrance oils.",
+    ],
+    text: "Happy to help you choose a fragrance oil. Which kind of scent do you like: fresh and clean, warm and woody, or sweet?",
+  },
+  {
+    key: "more",
+    matches: [
+      "Show me your other products, like pillows, duvets, candles and gifts.",
+      "Ask me about our products, like pillows, duvets, candles and gifts.",
+      "Tell me about your other products, like pillows, duvets, candles and gifts.",
+    ],
+    text: "Besides mattresses, diffusers and fragrance oils, we also have pillows, duvets and bedsets, plus scented candles, room sprays, reed diffusers and Zen gift sets. What would you like to see?",
   },
 ];
-const normalize = (t) => t.trim().toLowerCase().replace(/[\u2018\u2019]/g, "'");
+const normalize = (t) => t.trim().toLowerCase().replace(/[\u2018\u2019]/g, "'").replace(/[.!?\s]+$/, "");
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const CORS = {
@@ -627,7 +652,7 @@ Deno.serve(async (req) => {
 
       try {
         // 1. conversation
-        const opener = OPENERS.find((o) => o.match === normalize(message)) ?? null;
+        const opener = OPENERS.find((o) => o.matches.some((m) => normalize(m) === normalize(message))) ?? null;
         let conv = null;
         let isNew = false;
         if (UUID.test(String(body.conversation_id ?? ""))) {
@@ -635,7 +660,7 @@ Deno.serve(async (req) => {
           conv = data;
         }
         if (!conv) {
-          const entry = opener?.key ?? (["furniture", "scent", "comfort"].includes(body.entry_path) ? body.entry_path : "free");
+          const entry = opener?.key ?? (["mattress", "diffuser", "oil", "more", "furniture", "scent", "comfort"].includes(body.entry_path) ? body.entry_path : "free");
           const { data, error } = await db.from("conversations").insert({ session_id: sessionId, entry_path: entry }).select("id").single();
           if (error) throw error;
           conv = data;

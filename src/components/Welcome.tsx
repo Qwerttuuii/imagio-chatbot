@@ -1,45 +1,63 @@
-import { Armchair, ArrowUpRight, BedDouble, Flower2 } from "lucide-react";
+import { ArrowUpRight, BedDouble, Droplets, Gift, Wind } from "lucide-react";
+
 
 const CARDS = [
   {
-    label: "Find the right furniture",
-    Icon: Armchair,
-    prompt: "I'd like help finding the right furniture for my home.",
-  },
-  {
-    label: "Discover your scent",
-    Icon: Flower2,
-    prompt: "Help me discover the right scent for my space.",
-  },
-  {
-    label: "Find your comfort",
+    label: "Mattresses",
+    hint: "Find your perfect comfort",
     Icon: BedDouble,
-    prompt: "Help me find the right mattress and bedding for better sleep.",
+    bestSeller: true,
+    prompt: "Ask me about our mattress.",
+  },
+  {
+    label: "Diffuser machines",
+    hint: "Fragrance for any space",
+    Icon: Wind,
+    bestSeller: true,
+    prompt: "Ask me about our diffuser machines.",
+  },
+  {
+    label: "Fragrance oils",
+    hint: "Scents for your diffuser",
+    Icon: Droplets,
+    bestSeller: true,
+    prompt: "Ask me about our fragrance oils.",
+  },
+  {
+    label: "More from Imagio",
+    hint: "Pillows, duvets, candles, gifts and more",
+    Icon: Gift,
+    bestSeller: false,
+    prompt: "Ask me about our products, like pillows, duvets, candles and gifts.",
   },
 ];
 
 export default function Welcome({ onPick }: { onPick: (text: string) => void }) {
   return (
-    <div className="flex min-h-full flex-col justify-center py-8 text-center sm:py-10">
+    <div className="flex min-h-full flex-col justify-center py-10 text-center">
       <p className="text-sm text-muted">Your home, thoughtfully chosen.</p>
-      <h1 className="mt-3 text-3xl font-medium tracking-tight sm:text-4xl">How can we help?</h1>
+      <h1 className="mt-3 text-4xl font-medium tracking-tight">How can we help?</h1>
       <p className="mx-auto mt-4 max-w-sm text-[15px] leading-relaxed text-muted">
-        Furniture, fragrances, or better sleep. Find what feels right for you.
+        Choose what you’d like help with, or type your question below.
       </p>
 
-      <div className="mt-7 grid grid-cols-3 gap-2 text-left sm:mt-8 sm:gap-3">
-        {CARDS.map(({ label, Icon, prompt }) => (
+      <div className="mt-8 grid grid-cols-2 gap-3">
+        {CARDS.map(({ label, hint, Icon, bestSeller, prompt }) => (
           <button
             key={label}
             type="button"
             onClick={() => onPick(prompt)}
-            className="flex min-h-[116px] flex-col justify-between rounded-2xl border border-line bg-card p-3 transition hover:border-accent/50 hover:shadow-sm sm:h-[132px] sm:p-4"
+            className="flex min-h-[156px] flex-col justify-between rounded-2xl border border-line bg-card p-4 text-center transition hover:border-accent/50 hover:shadow-sm"
           >
             <div className="flex items-start justify-between">
-              <Icon size={18} className="shrink-0 text-accent sm:size-5" />
+              <Icon size={20} className="text-accent" />
               <ArrowUpRight size={14} className="text-muted" />
             </div>
-            <span className="text-[13px] leading-snug sm:text-[15px]">{label}</span>
+            <div>
+              {bestSeller && <p className="mb-1 text-[11px] font-medium text-accent"></p>}
+              <p className="text-[15px] font-medium leading-snug">{label}</p>
+              <p className="mt-1 text-xs leading-snug text-muted">{hint}</p>
+            </div>
           </button>
         ))}
       </div>

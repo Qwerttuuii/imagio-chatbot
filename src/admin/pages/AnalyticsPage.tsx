@@ -28,9 +28,13 @@ const PERIODS = [
 ];
 
 const PATH_LABEL: Record<string, string> = {
-  comfort: "Find your comfort",
-  scent: "Discover your scent",
-  furniture: "Find the right furniture",
+  mattress: "Mattresses card",
+  diffuser: "Diffuser machines card",
+  oil: "Fragrance oils card",
+  more: "More from Imagio card",
+  comfort: "Find your comfort (old card)",
+  scent: "Discover your scent (old card)",
+  furniture: "Find the right furniture (old card)",
   free: "Typed their own question",
 };
 
